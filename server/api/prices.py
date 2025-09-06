@@ -5,6 +5,45 @@ from services.redstone_client import RedStoneClient
 
 router = APIRouter()
 
+@router.get('/all')
+async def get_all_prices():
+    """Get prices for all available tokens"""
+    try:
+        async with RedStoneClient() as client:
+            prices = await client.get_all_prices()
+            
+            if not prices:
+                raise HTTPException(status_code=404, detail="No price data available")
+            
+            # Format response
+            formatted_prices = {}
+            for symbol, data in prices.items():
+                formatted_prices[symbol] = {
+                    "symbol": symbol,
+                    "price": data.get("price", 0),
+                    "timestamp": data.get("timestamp"),
+                    "source": data.get("source", "redstone"),
+                    "provider": data.get("provider", "redstone"),
+                    "formatted": f"${data.get('price', 0):,.4f}" if data.get('price', 0) > 0 else "N/A",
+                    "error": data.get("error")
+                }
+            
+            # Get all symbols that were returned
+            symbol_list = list(formatted_prices.keys())
+            
+            return {
+                "prices": formatted_prices,
+                "timestamp": max([p.get("timestamp", 0) for p in formatted_prices.values()] or [0]),
+                "provider": "redstone",
+                "total_tokens": len(symbol_list)
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching all prices: {str(e)}")
+
+
 @router.get("/current/{symbol}")
 async def get_current_price(symbol: str):
     """Get current price for a single token"""

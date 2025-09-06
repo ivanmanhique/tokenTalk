@@ -1,4 +1,4 @@
-# database.py
+# database.py - Updated with user email storage
 import sqlite3
 import aiosqlite
 import asyncio
@@ -30,6 +30,17 @@ class Alert:
         if self.created_at is None:
             self.created_at = datetime.now()
 
+@dataclass
+class User:
+    user_id: str
+    email: Optional[str] = None
+    created_at: datetime = None
+    email_notifications: bool = True
+    
+    def __post_init__(self):
+        if self.created_at is None:
+            self.created_at = datetime.now()
+
 class Database:
     def __init__(self, db_path: str = "tokenTalk.db"):
         self.db_path = db_path
@@ -37,6 +48,16 @@ class Database:
     async def init_database(self):
         """Initialize SQLite database with required tables"""
         async with aiosqlite.connect(self.db_path) as db:
+            # Users table
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id TEXT PRIMARY KEY,
+                    email TEXT,
+                    email_notifications BOOLEAN DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
             # Alerts table
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS alerts (
@@ -46,7 +67,8 @@ class Database:
                     status TEXT DEFAULT 'active',
                     message TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    triggered_at TIMESTAMP
+                    triggered_at TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES users(user_id)
                 )
             """)
             
@@ -82,12 +104,67 @@ class Database:
             await db.commit()
             print("✅ Database initialized successfully")
     
+    async def get_or_create_user(self, user_id: str, email: str = None) -> User:
+        """Get existing user or create new one"""
+        async with aiosqlite.connect(self.db_path) as db:
+            # Try to get existing user
+            async with db.execute(
+                "SELECT user_id, email, email_notifications, created_at FROM users WHERE user_id = ?",
+                (user_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                
+                if row:
+                    return User(
+                        user_id=row[0],
+                        email=row[1],
+                        email_notifications=bool(row[2]),
+                        created_at=datetime.fromisoformat(row[3]) if row[3] else datetime.now()
+                    )
+            
+            # Create new user
+            await db.execute(
+                "INSERT INTO users (user_id, email) VALUES (?, ?)",
+                (user_id, email)
+            )
+            await db.commit()
+            
+            return User(user_id=user_id, email=email)
+    
+    async def update_user_email(self, user_id: str, email: str) -> bool:
+        """Update user's email address"""
+        async with aiosqlite.connect(self.db_path) as db:
+            # Create user if doesn't exist
+            await self.get_or_create_user(user_id, email)
+            
+            # Update email
+            cursor = await db.execute(
+                "UPDATE users SET email = ? WHERE user_id = ?",
+                (email, user_id)
+            )
+            await db.commit()
+            return cursor.rowcount > 0
+    
+    async def get_user_email(self, user_id: str) -> Optional[str]:
+        """Get user's email address"""
+        async with aiosqlite.connect(self.db_path) as db:
+            async with db.execute(
+                "SELECT email FROM users WHERE user_id = ?",
+                (user_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                return row[0] if row else None
+    
     async def create_alert(self, user_id: str, condition: AlertCondition, message: str = "") -> str:
         """Create a new alert"""
         alert_id = str(uuid.uuid4())
         condition_json = json.dumps(asdict(condition))
         
         async with aiosqlite.connect(self.db_path) as db:
+            # Ensure user exists
+            await self.get_or_create_user(user_id)
+            
+            # Create alert
             await db.execute("""
                 INSERT INTO alerts (id, user_id, condition_json, message)
                 VALUES (?, ?, ?, ?)

@@ -14,10 +14,42 @@ class RedStoneClient:
         self.session = aiohttp.ClientSession()
         return self
         
+        
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.session:
             await self.session.close()
-    
+
+
+    async def get_all_prices(self) -> Dict[str, Dict]:
+        """Get prices for all available tokens"""
+        if not self.session:
+            self.session = aiohttp.ClientSession()
+            
+        try:
+            url = "https://api.redstone.finance/prices?provider=redstone"
+            async with self.session.get(url, timeout=15) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    # The API returns an object with token symbols as keys
+                    prices = {}
+                    for symbol, token_data in data.items():
+                        prices[symbol] = {
+                            "symbol": symbol,
+                            "price": token_data.get("value", 0),
+                            "timestamp": token_data.get("timestamp"),
+                            "source": "redstone",
+                            "provider": token_data.get("provider", "redstone")
+                        }
+                    
+                    return prices
+                else:
+                    logger.error(f"Failed to fetch all prices: {response.status}")
+                    return {}
+                    
+        except Exception as e:
+            logger.error(f"Error fetching all prices: {e}")
+            return {}
     async def get_token_price(self, symbol: str) -> Dict:
         """Get current price data for a token"""
         if not self.session:

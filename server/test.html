@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Notification Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .user-section { 
+            border: 2px solid #ccc; 
+            margin: 10px 0; 
+            padding: 15px; 
+            border-radius: 8px;
+        }
+        .user1 { border-color: #4CAF50; background-color: #f0f8f0; }
+        .user2 { border-color: #2196F3; background-color: #f0f5ff; }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            margin: 5px; 
+            border-radius: 4px; 
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        .messages { 
+            background: #f8f9fa; 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 4px;
+            height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .alert { color: red; font-weight: bold; }
+        .info { color: blue; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 WebSocket Notification Test</h1>
+        <p>This tests if notifications are sent to the correct users via WebSocket.</p>
+        
+        <!-- User 1 Section -->
+        <div class="user-section user1">
+            <h3>👤 User 1: Alice</h3>
+            <button onclick="connectUser1()">Connect Alice</button>
+            <button onclick="disconnectUser1()">Disconnect Alice</button>
+            <button onclick="createAlertAlice()">Create Alert for Alice</button>
+            <button onclick="triggerAlertAlice()">Trigger Alert for Alice</button>
+            <div id="alice-status">Status: Disconnected</div>
+            <div class="messages" id="alice-messages"></div>
+        </div>
+        
+        <!-- User 2 Section -->
+        <div class="user-section user2">
+            <h3>👤 User 2: Bob</h3>
+            <button onclick="connectUser2()">Connect Bob</button>
+            <button onclick="disconnectUser2()">Disconnect Bob</button>
+            <button onclick="createAlertBob()">Create Alert for Bob</button>
+            <button onclick="triggerAlertBob()">Trigger Alert for Bob</button>
+            <div id="bob-status">Status: Disconnected</div>
+            <div class="messages" id="bob-messages"></div>
+        </div>
+        
+        <!-- Test Section -->
+        <div class="user-section">
+            <h3>🧪 Tests</h3>
+            <button onclick="runUserTargetingTest()">🎯 Test User Targeting</button>
+            <button onclick="checkUserData()">💾 Check User Data Storage</button>
+            <button onclick="clearMessages()">🗑️ Clear Messages</button>
+            <div id="test-results"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws1 = null; // Alice's connection
+        let ws2 = null; // Bob's connection
+        
+        const API_BASE = 'http://localhost:8000';
+        const WS_BASE = 'ws://localhost:8000/ws';
+        
+        function log(user, message, type = 'info') {
+            const messagesDiv = document.getElementById(`${user}-messages`);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'alert' ? 'alert' : type === 'success' ? 'success' : 'info';
+            messagesDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function updateStatus(user, status) {
+            document.getElementById(`${user}-status`).textContent = `Status: ${status}`;
+        }
+        
+        // Alice's WebSocket functions
+        function connectUser1() {
+            if (ws1) return;
+            
+            ws1 = new WebSocket(`${WS_BASE}?user_id=alice_test`);
+            
+            ws1.onopen = () => {
+                updateStatus('alice', 'Connected ✅');
+                log('alice', 'Connected to WebSocket', 'success');
+            };
+            
+            ws1.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'alert_notification') {
+                    log('alice', `🚨 ALERT: ${data.data.title}`, 'alert');
+                } else {
+                    log('alice', `📨 ${data.type}: ${data.message || 'received'}`, 'info');
+                }
+            };
+            
+            ws1.onclose = () => {
+                updateStatus('alice', 'Disconnected ❌');
+                log('alice', 'Disconnected from WebSocket', 'info');
+                ws1 = null;
+            };
+            
+            ws1.onerror = (error) => {
+                log('alice', `❌ WebSocket error: ${error}`, 'alert');
+            };
+        }
+        
+        function disconnectUser1() {
+            if (ws1) {
+                ws1.close();
+            }
+        }
+        
+        // Bob's WebSocket functions
+        function connectUser2() {
+            if (ws2) return;
+            
+            ws2 = new WebSocket(`${WS_BASE}?user_id=bob_test`);
+            
+            ws2.onopen = () => {
+                updateStatus('bob', 'Connected ✅');
+                log('bob', 'Connected to WebSocket', 'success');
+            };
+            
+            ws2.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'alert_notification') {
+                    log('bob', `🚨 ALERT: ${data.data.title}`, 'alert');
+                } else {
+                    log('bob', `📨 ${data.type}: ${data.message || 'received'}`, 'info');
+                }
+            };
+            
+            ws2.onclose = () => {
+                updateStatus('bob', 'Disconnected ❌');
+                log('bob', 'Disconnected from WebSocket', 'info');
+                ws2 = null;
+            };
+            
+            ws2.onerror = (error) => {
+                log('bob', `❌ WebSocket error: ${error}`, 'alert');
+            };
+        }
+        
+        function disconnectUser2() {
+            if (ws2) {
+                ws2.close();
+            }
+        }
+        
+        // Alert creation functions
+        async function createAlertAlice() {
+            try {
+                const response = await fetch(`${API_BASE}/api/chat/message`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        message: "Alert me when ETH goes above $3500",
+                        user_id: "alice_test"
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.alert_created) {
+                    log('alice', `✅ Alert created: ${result.alert_id}`, 'success');
+                } else {
+                    log('alice', `❌ Alert creation failed`, 'alert');
+                }
+            } catch (error) {
+                log('alice', `❌ Error: ${error}`, 'alert');
+            }
+        }
+        
+        async function createAlertBob() {
+            try {
+                const response = await fetch(`${API_BASE}/api/chat/message`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        message: "Alert me when BTC drops below $90000",
+                        user_id: "bob_test"
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.alert_created) {
+                    log('bob', `✅ Alert created: ${result.alert_id}`, 'success');
+                } else {
+                    log('bob', `❌ Alert creation failed`, 'alert');
+                }
+            } catch (error) {
+                log('bob', `❌ Error: ${error}`, 'alert');
+            }
+        }
+        
+        // Trigger alert functions
+        async function triggerAlertAlice() {
+            try {
+                const response = await fetch(`${API_BASE}/api/test/trigger-fake-alert?user_id=alice_test`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    log('alice', `✅ Fake alert triggered`, 'success');
+                } else {
+                    log('alice', `❌ Failed to trigger alert`, 'alert');
+                }
+            } catch (error) {
+                log('alice', `❌ Error: ${error}`, 'alert');
+            }
+        }
+        
+        async function triggerAlertBob() {
+            try {
+                const response = await fetch(`${API_BASE}/api/test/trigger-fake-alert?user_id=bob_test`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    log('bob', `✅ Fake alert triggered`, 'success');
+                } else {
+                    log('bob', `❌ Failed to trigger alert`, 'alert');
+                }
+            } catch (error) {
+                log('bob', `❌ Error: ${error}`, 'alert');
+            }
+        }
+        
+        // Test functions
+        async function runUserTargetingTest() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<h4>🧪 Running User Targeting Test...</h4>';
+            
+            // Clear previous messages
+            clearMessages();
+            
+            // Connect both users if not connected
+            if (!ws1) connectUser1();
+            if (!ws2) connectUser2();
+            
+            // Wait a bit for connections
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Trigger alert for Alice only
+            await triggerAlertAlice();
+            
+            // Wait for notifications
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            resultsDiv.innerHTML += '<p>✅ Test complete! Check the message boxes above.</p>';
+            resultsDiv.innerHTML += '<p>🎯 <strong>Expected:</strong> Alice should get alert notification, Bob should not.</p>';
+        }
+        
+        async function checkUserData() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<h4>💾 Checking User Data Storage...</h4>';
+            
+            try {
+                // Check Alice's alerts
+                const aliceResponse = await fetch(`${API_BASE}/api/alerts/user/alice_test`);
+                const aliceData = await aliceResponse.json();
+                
+                // Check Bob's alerts
+                const bobResponse = await fetch(`${API_BASE}/api/alerts/user/bob_test`);
+                const bobData = await bobResponse.json();
+                
+                resultsDiv.innerHTML += `<p>📝 Alice has ${aliceData.total} alerts stored</p>`;
+                resultsDiv.innerHTML += `<p>📝 Bob has ${bobData.total} alerts stored</p>`;
+                
+                if (aliceData.total > 0 || bobData.total > 0) {
+                    resultsDiv.innerHTML += '<p>✅ User data is being stored correctly!</p>';
+                } else {
+                    resultsDiv.innerHTML += '<p>⚠️ No user data found. Create some alerts first.</p>';
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML += `<p>❌ Error checking user data: ${error}</p>`;
+            }
+        }
+        
+        function clearMessages() {
+            document.getElementById('alice-messages').innerHTML = '';
+            document.getElementById('bob-messages').innerHTML = '';
+        }
+        
+        // Auto-connect on page load
+        window.onload = () => {
+            setTimeout(() => {
+                connectUser1();
+                connectUser2();
+            }, 500);
+        };
+        
+        // Cleanup on page unload
+        window.onbeforeunload = () => {
+            if (ws1) ws1.close();
+            if (ws2) ws2.close();
+        };
+    </script>
+</body>
+</html>
