@@ -16,6 +16,7 @@ class AlertResponse:
 @dataclass
 class CreateAlertRequest:
     user_id: str
+    user_email: str
     message: str  # Natural language: "Alert me when ETH hits $4000"
     # We'll parse this with NLP later
 

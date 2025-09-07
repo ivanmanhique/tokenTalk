@@ -20,7 +20,7 @@ class Settings:
     
     # Resend Email Configuration
     RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-    FROM_EMAIL = os.getenv("FROM_EMAIL", "alerts@yourdomain.com")
+    FROM_EMAIL = os.getenv("FROM_EMAIL", "contact@xidjumba.com")
     ENABLE_EMAIL_NOTIFICATIONS = os.getenv("ENABLE_EMAIL_NOTIFICATIONS", "True").lower() == "true"
     
     # Database

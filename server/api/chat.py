@@ -16,6 +16,7 @@ router = APIRouter()
 class ChatRequest(BaseModel):
     message: str
     user_id: str = "default_user"
+    user_email: str = "default@email.com" 
 
 class TestParsingRequest(BaseModel):
     message: str
@@ -26,6 +27,9 @@ class ComplexMessageRequest(BaseModel):
     user_id: str = "default_user"
     context: Optional[Dict] = None
 
+
+    
+        
 @router.post("/message")
 async def chat_message(
     request: ChatRequest,  # Now accepts JSON instead of query params
@@ -65,6 +69,7 @@ async def chat_message(
                 
                 alert_id = await db.create_alert(
                     user_id=request.user_id,
+                    user_email=request.user_email,
                     condition=condition,
                     message=request.message
                 )

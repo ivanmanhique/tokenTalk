@@ -30,6 +30,7 @@ class NotificationService:
                 "id": len(self.notifications) + 1,
                 "alert_id": alert_data["alert_id"],
                 "user_id": alert_data["user_id"], 
+                "user_email": alert_data["user_email"],
                 "message": notification["message"],
                 "type": "alert_triggered",
                 "timestamp": datetime.now().isoformat(),
@@ -103,10 +104,10 @@ class NotificationService:
         try:
             # Get user email from database
             from database import db
-            user_email = await db.get_user_email(alert_data["user_id"])
+            user_email = await db.get_user_email(alert_data["user_email"])
             
             if not user_email:
-                logger.debug(f"No email address for user {alert_data['user_id']}")
+                logger.debug(f"No email address for user {alert_data['user_email']}")
                 return
             
             # Import Resend

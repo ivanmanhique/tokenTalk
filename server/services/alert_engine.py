@@ -7,8 +7,9 @@ import json
 
 from database import Database, Alert
 from services.redstone_client import RedStoneClient
-from services.notification_service import NotificationService
+# from services.notification_service import NotificationService
 from config import settings
+from services.enhanced_notification_service import EnhancedNotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class AlertEngine:
     def __init__(self):
         self.db = Database()
         self.redstone = RedStoneClient()
-        self.notifications = NotificationService()
+        self.notifications = EnhancedNotificationService()
         self.running = False
         self.monitoring_interval = 30  # seconds
         self.price_cache = {}
@@ -266,6 +267,7 @@ class AlertEngine:
             alert_data = {
                 "alert_id": alert.id,
                 "user_id": alert.user_id,
+                "user_email":alert.user_email,
                 "message": alert.message,
                 "condition": {
                     "type": alert.condition.condition_type,

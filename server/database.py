@@ -20,6 +20,7 @@ class AlertCondition:
 class Alert:
     id: str
     user_id: str
+    user_email : str
     condition: AlertCondition
     status: str = "active"  # active, paused, triggered, expired
     created_at: datetime = None
@@ -63,6 +64,7 @@ class Database:
                 CREATE TABLE IF NOT EXISTS alerts (
                     id TEXT PRIMARY KEY,
                     user_id TEXT NOT NULL,
+                    user_email TEXT,
                     condition_json TEXT NOT NULL,
                     status TEXT DEFAULT 'active',
                     message TEXT,
@@ -155,7 +157,7 @@ class Database:
                 row = await cursor.fetchone()
                 return row[0] if row else None
     
-    async def create_alert(self, user_id: str, condition: AlertCondition, message: str = "") -> str:
+    async def create_alert(self, user_id: str, user_email:str,condition: AlertCondition, message: str = "") -> str:
         """Create a new alert"""
         alert_id = str(uuid.uuid4())
         condition_json = json.dumps(asdict(condition))
@@ -166,22 +168,25 @@ class Database:
             
             # Create alert
             await db.execute("""
-                INSERT INTO alerts (id, user_id, condition_json, message)
-                VALUES (?, ?, ?, ?)
-            """, (alert_id, user_id, condition_json, message))
+                INSERT INTO alerts (id, user_id, user_email,condition_json, message)
+                VALUES (?, ?, ?, ?, ?)
+            """, (alert_id, user_id, user_email ,condition_json, message))
             await db.commit()
             
         print(f"✅ Created alert {alert_id[:8]} for user {user_id}")
         return alert_id
     
+
     async def get_active_alerts(self) -> List[Alert]:
         """Get all active alerts"""
         async with aiosqlite.connect(self.db_path) as db:
+            # ✅ UPDATED QUERY - Added JOIN to get email
             async with db.execute("""
-                SELECT id, user_id, condition_json, status, message, created_at, triggered_at
-                FROM alerts 
-                WHERE status = 'active'
-                ORDER BY created_at DESC
+                SELECT a.id, a.user_id, a.condition_json, a.status, a.message, a.created_at, a.triggered_at, u.email
+                FROM alerts a
+                LEFT JOIN users u ON a.user_id = u.user_id
+                WHERE a.status = 'active'
+                ORDER BY a.created_at DESC
             """) as cursor:
                 alerts = []
                 async for row in cursor:
@@ -191,6 +196,7 @@ class Database:
                     alert = Alert(
                         id=row[0],
                         user_id=row[1],
+                        user_email=row[7] or "",  # ✅ Now row[7] exists (u.email)
                         condition=condition,
                         status=row[3],
                         message=row[4],
@@ -204,11 +210,13 @@ class Database:
     async def get_user_alerts(self, user_id: str) -> List[Alert]:
         """Get all alerts for a specific user"""
         async with aiosqlite.connect(self.db_path) as db:
+            # ✅ UPDATED QUERY - Added JOIN to get email
             async with db.execute("""
-                SELECT id, user_id, condition_json, status, message, created_at, triggered_at
-                FROM alerts 
-                WHERE user_id = ?
-                ORDER BY created_at DESC
+                SELECT a.id, a.user_id, a.condition_json, a.status, a.message, a.created_at, a.triggered_at, u.email
+                FROM alerts a
+                LEFT JOIN users u ON a.user_id = u.user_id
+                WHERE a.user_id = ?
+                ORDER BY a.created_at DESC
             """, (user_id,)) as cursor:
                 alerts = []
                 async for row in cursor:
@@ -218,6 +226,7 @@ class Database:
                     alert = Alert(
                         id=row[0],
                         user_id=row[1],
+                        user_email=row[7] or "",  # ✅ Now row[7] exists (u.email)
                         condition=condition,
                         status=row[3],
                         message=row[4],
@@ -225,8 +234,8 @@ class Database:
                         triggered_at=datetime.fromisoformat(row[6]) if row[6] else None
                     )
                     alerts.append(alert)
-                
-                return alerts
+            
+            return alerts
     
     async def update_alert_status(self, alert_id: str, status: str):
         """Update alert status (active, paused, triggered, expired)"""

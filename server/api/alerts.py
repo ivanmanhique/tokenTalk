@@ -86,6 +86,7 @@ async def create_alert(request: CreateAlertRequest):
         # Create alert in database
         alert_id = await db.create_alert(
             user_id=request.user_id,
+            user_email = request.user_email,
             condition=condition,
             message=request.message
         )
