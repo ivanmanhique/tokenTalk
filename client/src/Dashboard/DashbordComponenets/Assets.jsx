@@ -9,8 +9,8 @@ const Assets = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilter, setShowFilter] = useState(false);
-  const [sortBy, setSortBy] = useState('price');
-  const [sortOrder, setSortOrder] = useState('desc');
+  const [sortBy, setSortBy] = useState('symbol');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
 
   async function getCurrenciesValues() {
@@ -159,7 +159,9 @@ const Assets = () => {
             <Filter className="w-4 h-4" />
             <span className="text-sm">Filter</span>
           </button>
-         
+          <button className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all duration-300">
+            <span className="text-sm font-medium">Notify me</span>
+          </button>
         </div>
       </div>
 
@@ -204,13 +206,12 @@ const Assets = () => {
               onChange={(e) => setSortBy(e.target.value)}
               className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-purple-400"
             >
-            <option value="price" className="bg-gray-800">Price</option>
               <option value="symbol" className="bg-gray-800">Name</option>
-             
+              <option value="price" className="bg-gray-800">Price</option>
             </select>
 
             <button
-              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
               className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 transition-colors"
             >
               {sortOrder === 'asc' ? '↑' : '↓'}
@@ -243,33 +244,31 @@ const Assets = () => {
     <thead>
       <tr className="border-b border-white/10">
         <th className="text-left py-4 px-6 text-gray-400 font-medium">Asset</th>
-        <th className="text-left py-4 px-6 text-gray-400 font-medium">Price</th>
-        <th className="text-left py-4 px-6 text-gray-400 font-medium">Provider</th>
+        <th className="text-right py-4 px-6 text-gray-400 font-medium">Price</th>
+        <th className="text-right py-4 px-6 text-gray-400 font-medium">24h Change</th>
+        <th className="text-right py-4 px-6 text-gray-400 font-medium">Holdings</th>
+        <th className="text-right py-4 px-6 text-gray-400 font-medium">Value</th>
         <th className="text-left py-4 px-6 text-gray-400 font-medium">Chart</th>
       </tr>
     </thead>
     <tbody>
       {currentData.map((key, index) => {
         // Generate fake chart data for each crypto
-        const generateChartPath = (isPositive) => {
-            const points = [];
-            const width = 64;
-            const height = 32;
-            let currentY = height / 2;
-
-            for (let i = 0; i <= 12; i++) {
-                const x = (i / 12) * width;
-
-                // bias the variance: up if positive, down if negative
-                const bias = isPositive ? -1 : 1; // SVG y-axis: smaller = higher
-                const variance = (Math.random() - 0.5) * 6 + bias * 1.5;
-
-                currentY = Math.max(4, Math.min(height - 4, currentY + variance));
-                points.push(`${x},${currentY}`);
-            }
-
-            return `M${points.join(" L")}`;
-            };
+        const generateChartPath = () => {
+          const points = [];
+          const width = 64;
+          const height = 32;
+          let currentY = height / 2;
+          
+          for (let i = 0; i <= 12; i++) {
+            const x = (i / 12) * width;
+            const variance = (Math.random() - 0.5) * 10;
+            currentY = Math.max(4, Math.min(height - 4, currentY + variance));
+            points.push(`${x},${currentY}`);
+          }
+          
+          return `M${points.join(' L')}`;
+        };
 
         // Get 3-letter symbol
         const getSymbol = (key) => {
@@ -312,18 +311,32 @@ const Assets = () => {
                 </button>
               </div>
             </td>
-            <td className="py-4 px-6 ">
+            <td className="py-4 px-6 text-right">
               <span className="font-medium">${parseFloat(data[key].value).toFixed(2)}</span>
             </td>
-           
-            <td className="py-4 px-6 ">
-              <div>
-                <p className="text-gray-400 text-xs">${data[key].provider}</p>
+            <td className="py-4 px-6 text-right">
+              <div className={`flex items-center justify-end space-x-1 ${cryptochange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {cryptochange24h >= 0 ? (
+                  <TrendingUp className="w-4 h-4" />
+                ) : (
+                  <TrendingDown className="w-4 h-4" />
+                )}
+                <span className="font-medium">
+                  {cryptochange24h >= 0 ? '+' : ''}{cryptochange24h.toFixed(2)}%
+                </span>
               </div>
             </td>
-           
-            <td className="py-4 px-6  ">
-              <div className="w-16 h-8 relative justify-right">
+            <td className="py-4 px-6 text-right">
+              <div>
+                <span className="font-medium">0.00</span>
+                <p className="text-gray-400 text-xs">${data[key].value}</p>
+              </div>
+            </td>
+            <td className="py-4 px-6 text-right">
+              <span className="font-medium">$0.00</span>
+            </td>
+            <td className="py-4 px-6 text-right">
+              <div className="w-16 h-8 relative">
                 <svg 
                   className="w-full h-full" 
                   viewBox="0 0 64 32" 
