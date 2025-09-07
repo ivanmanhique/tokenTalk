@@ -1,5 +1,6 @@
 # 🚀 tokenTalk
 Youtube link: https://youtu.be/bt0fcm563JM
+
 **AI-powered cryptocurrency price alerts with blockchain-secured user data**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
