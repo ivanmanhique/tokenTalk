@@ -18,14 +18,14 @@ const GetNotify = ({ setIsgetnotify }) => {
 
     try {
       const response = await fetch(
-        "https://a84b8498350c.ngrok-free.app/api/chat/message",
+        "https://fa2592faf19e.ngrok-free.app/api/chat/message",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: userDescription,
-            user_id: "default_user",
-            user_email: "ziad99kr@gmail.com",
+            user_id: "ivan",
+            user_email: "viriatomanhique@gmail.com",
           }),
         }
       );
