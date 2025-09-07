@@ -156,7 +156,7 @@ const LandingPage = () => {
                 <Activity className="w-6 h-6 text-white" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                CryptoWatch
+                TokenTalk
               </span>
             </div>
 

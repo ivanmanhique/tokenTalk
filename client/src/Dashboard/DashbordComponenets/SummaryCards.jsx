@@ -1,10 +1,24 @@
-import { useState } from "react";
+import { useState  , useEffect} from "react";
 import { TrendingUp, TrendingDown, Wallet, BellRing ,BarChart3, PieChart, Settings, Bell, Search, Filter, Star, ArrowUpRight, ArrowDownRight, Eye, EyeOff, RefreshCw, Zap, Shield, Globe, Sidebar } from 'lucide-react';
-
+import '../../App.css'
 const SummaryCards = ({setIsgetnotify})=>{
 
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const portfolioChange = 500;
+   const [currentSuggestion, setCurrentSuggestion] = useState(0);
+  
+  const suggestions = [
+    "I'm worried about my AAVE position, tell me if it falls 25%",
+    "Alert me when Bitcoin reaches $100,000", 
+    "Notify me if Ethereum drops below $3,000"
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSuggestion((prev) => (prev + 1) % suggestions.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="col-span-1 md:col-span-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-500 group">
@@ -36,39 +50,6 @@ return (
               </span>
             </div>
           </div>
-          {/*
-          <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-green-500/50 transition-all duration-500 group">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-gray-400 text-sm">Top Gainer</p>
-                <h3 className="text-xl font-bold">SOL</h3>
-              </div>
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <ArrowUpRight className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-green-400 font-medium">+5.67%</span>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-red-500/50 transition-all duration-500 group">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-gray-400 text-sm">Top Loser</p>
-                <h3 className="text-xl font-bold">ETH</h3>
-              </div>
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <ArrowDownRight className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <TrendingDown className="w-4 h-4 text-red-400" />
-              <span className="text-red-400 font-medium">-1.24%</span>
-            </div>
-          </div>
-*/}
            <div onClick={() => setIsgetnotify(prev => !prev)} className="bg-gradient-to-br px-10 col-span-1 md:col-span-3 from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10  transition-all duration-500 group">
             <div className="flex items-center justify-between mb-4">
                <div>
@@ -80,7 +61,13 @@ return (
               </div>
          
             </div>
-                <input type="text" value="I'm worried about my AAVE position, tell me if it falls 25%" className="w-full text-gray-400 bg-white/10 px-2 py-3 rounded-2xl"></input>
+                <input 
+                value={suggestions[currentSuggestion]} 
+                type="text"
+                 readOnly
+                key={currentSuggestion}
+                 style={{animation: 'fadeInUp 0.5s ease-out'}}
+                className="w-full focus:outline-none text-gray-400 bg-white/10 px-4 py-3 rounded-2xl" />
           </div>
         </div>
 );
